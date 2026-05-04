@@ -1,0 +1,73 @@
+# ============================================================
+# NGO — Null Geodesic Observer  |  .gitignore
+# Author: Chirag Rathi
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+*.so
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Database (user observations — not tracked, stays local)
+data/observations.db
+data/*.db
+/tmp/*.db
+
+# Plots and figures (generated, not tracked)
+/tmp/*.png
+/tmp/*.npy
+outputs/
+figures/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Distribution
+*.tar.gz
+*.zip
+
+# Paper drafts (track only final versions)
+paper/*_Draft*.docx
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.synctex.gz

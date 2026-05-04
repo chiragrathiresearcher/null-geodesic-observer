@@ -1,0 +1,94 @@
+# ============================================================
+# NGO — Null Geodesic Observer
+# File  : .github/workflows/ci.yml
+# Author: Chirag Rathi
+# Purpose: Run tests on every push and pull request
+# ============================================================
+
+name: NGO Physics Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy scipy matplotlib plotly pandas pytest
+
+    - name: Install NGO package
+      run: pip install -e .
+
+    - name: Run physics unit tests
+      run: |
+        python -m pytest tests/ -v --tb=short
+
+    - name: Run demo script (smoke test)
+      run: |
+        python demo.py
+
+    - name: Verify core physics
+      run: |
+        python - << 'EOF'
+        import numpy as np
+        import sys
+        sys.path.insert(0, '.')
+
+        from ngo.core.metric import MinkowskiMetric, SchwarzschildMetric
+        from ngo.core.delta_t import shapiro_delay_analytic
+        from ngo.core.asymmetry_check import check_asymmetry
+        from ngo.database.known_systems import get_system
+
+        # Critical physics checks
+        m = MinkowskiMetric()
+        assert np.allclose(m.christoffel(np.zeros(4)), 0), "Minkowski Christoffel must be 0"
+
+        dt = shapiro_delay_analytic(1.989e30, 1.5e12, 1.5e11, 1.6*6.957e8)
+        assert 50e-6 < dt < 500e-6, f"Shapiro delay {dt*1e6:.1f} μs out of range"
+
+        asym = check_asymmetry({'L': 1e11}, {'L': 1e11})
+        assert asym['asymmetry_parameter'] == 0.0, "Symmetric case must give κ=0"
+
+        q = get_system('Q0957+561')
+        assert 400 < q['delta_t_obs']/86400 < 440, "Q0957 Δt out of range"
+
+        print("All CI physics checks passed.")
+        EOF
+
+  lint:
+    name: Code quality check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - name: Install linter
+      run: pip install pyflakes
+    - name: Check for syntax errors
+      run: |
+        python -m pyflakes ngo/core/metric.py
+        python -m pyflakes ngo/core/geodesic.py
+        python -m pyflakes ngo/core/delta_t.py
+        python -m pyflakes ngo/core/asymmetry_check.py
+        python -m pyflakes ngo/database/known_systems.py
+        python -m pyflakes ngo/database/collector.py
