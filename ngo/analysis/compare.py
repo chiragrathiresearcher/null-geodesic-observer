@@ -20,9 +20,7 @@ For each system:
 import numpy as np
 from ..database.known_systems import KNOWN_SYSTEMS
 from ..core.delta_t import shapiro_delay_analytic, lensing_delay_analytic
-
-C = 2.998e8
-G = 6.674e-11
+from ..core.metric import C, G
 
 
 def compare_shapiro(system: dict) -> dict:
