@@ -29,7 +29,7 @@ from typing import Optional
 
 from .geodesic import GeodesicSolution, GeodesicSolver
 from .path_integral import compute_path_integral, compute_weak_field_integral
-from .metric import Metric, WeakFieldMetric, SchwarzschildMetric
+from .metric import Metric, WeakFieldMetric
 from .proper_distance import compute_proper_distance
 from .asymmetry_check import check_asymmetry
 
