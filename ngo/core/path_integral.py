@@ -99,11 +99,25 @@ def compute_path_integral(sol: GeodesicSolution) -> dict:
         'n_values'   : np.ndarray — refractive index n(x) at each step
         'dsigma'     : np.ndarray — spatial step sizes dσ
         'integrand'  : np.ndarray — n(x) × dσ at each step
-        'n_steps'    : int   — number of integration steps used
+        'n_steps'    : int   — number of integration points
     """
+    # defensive checks
+    if not hasattr(sol, 'metric') or sol.metric is None:
+        raise ValueError("GeodesicSolution must include 'metric' attribute for path integral evaluation.")
+
     x_path = sol.x          # shape (4, N)
     N      = x_path.shape[1]
     metric = sol.metric
+
+    if N < 2:
+        return {
+            'L': 0.0,
+            't_travel': 0.0,
+            'n_values': np.array([]),
+            'dsigma': np.array([]),
+            'integrand': np.array([]),
+            'n_steps': N
+        }
 
     n_values  = np.zeros(N)
     dsigma    = np.zeros(N - 1)
@@ -157,14 +171,29 @@ def compute_weak_field_integral(
     Returns
     -------
     dict with keys:
-        'potential_integral' : float — ∫ Φ(x) dσ  [J·m/kg]
+        'potential_integral' : float — ∫ Φ(x) dσ  [units of Φ·m]
         'd_coord'            : float — coordinate path length  [m]
         'L_corrected'        : float — d + (1/c²)∫Φdσ  [m]
+        'L'                  : float — alias for L_corrected (for compatibility)
         't_travel'           : float — travel time  [s]
         'phi_values'         : np.ndarray — Φ(x) at each step
     """
+    # defensive checks
+    if not hasattr(sol, 'metric') or sol.metric is None:
+        raise ValueError("GeodesicSolution must include 'metric' attribute for weak-field integral evaluation.")
+
     x_path = sol.x
     N      = x_path.shape[1]
+
+    if N < 2:
+        return {
+            'potential_integral': 0.0,
+            'd_coord': 0.0,
+            'L_corrected': 0.0,
+            'L': 0.0,
+            't_travel': 0.0,
+            'phi_values': np.array([]),
+        }
 
     phi_values = np.zeros(N)
     dsigma     = np.zeros(N - 1)
@@ -172,6 +201,7 @@ def compute_weak_field_integral(
     d_steps    = np.zeros(N - 1)
 
     for i in range(N):
+        # metric.potential expects x shape (4,), spatial part used inside
         phi_values[i] = metric.potential(x_path[:, i])
 
     for i in range(N - 1):
@@ -190,6 +220,7 @@ def compute_weak_field_integral(
         'potential_integral': potential_integral,
         'd_coord'           : d_coord,
         'L_corrected'       : L_corrected,
+        'L'                 : L_corrected,  # compatibility alias
         't_travel'          : t_travel,
         'phi_values'        : phi_values,
     }
