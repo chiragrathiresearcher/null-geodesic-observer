@@ -92,9 +92,9 @@ class GeodesicSolver:
     Parameters
     ----------
     metric   : Metric  — spacetime metric object from ngo.core.metric
-    rtol     : float   — relative tolerance for ODE solver (default 1e-10)
+    rtol     : float   — relative tolerance for ODE solver (default 1e-9)
     atol     : float   — absolute tolerance for ODE solver (default 1e-12)
-    max_step : float   — maximum affine parameter step size
+    max_step : float   — maximum affine parameter step size (None = no limit)
 
     Example
     -------
@@ -112,9 +112,9 @@ class GeodesicSolver:
     def __init__(
         self,
         metric   : Metric,
-        rtol     : float = 1e-10,
+        rtol     : float = 1e-9,
         atol     : float = 1e-12,
-        max_step : float = np.inf
+        max_step : Optional[float] = None
     ):
         self.metric   = metric
         self.rtol     = rtol
@@ -220,7 +220,7 @@ class GeodesicSolver:
         y0   = np.concatenate([x0, k0])
         lam_eval = np.linspace(lam_start, lam_end, n_eval)
 
-        result = solve_ivp(
+        ivp_kwargs = dict(
             fun     = self._geodesic_rhs,
             t_span  = (lam_start, lam_end),
             y0      = y0,
@@ -228,9 +228,12 @@ class GeodesicSolver:
             t_eval  = lam_eval,
             rtol    = self.rtol,
             atol    = self.atol,
-            max_step= self.max_step,
-            events  = events
+            events  = events,
         )
+        if self.max_step is not None:
+            ivp_kwargs['max_step'] = self.max_step
+
+        result = solve_ivp(**ivp_kwargs)
 
         x_path = result.y[:4, :]
         k_path = result.y[4:, :]
