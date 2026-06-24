@@ -188,6 +188,16 @@ class DeltaTComputer:
             x0_1, k0_1, x0_2, k0_2, lam_end, n_eval=n_eval
         )
 
+        # Validate solver output has expected attributes
+        required_attrs = ('position_end',)
+        for i, sol in enumerate((sol1, sol2), start=1):
+            if not hasattr(sol, 'position_end'):
+                raise RuntimeError(
+                    f"Geodesic solver returned invalid solution for geodesic {i}; "
+                    "expected object with attribute 'position_end'. Got: "
+                    f"{type(sol)} with attrs {dir(sol)[:10]}"
+                )
+
         # compute path integrals
         if method == 'weak_field' and isinstance(self.metric, WeakFieldMetric):
             pi1 = compute_weak_field_integral(sol1, self.metric)
@@ -196,10 +206,24 @@ class DeltaTComputer:
             pi1 = compute_path_integral(sol1)
             pi2 = compute_path_integral(sol2)
 
-        t1 = pi1['t_travel']
-        t2 = pi2['t_travel']
-        L1 = pi1['L'] if 'L' in pi1 else pi1['L_corrected']
-        L2 = pi2['L'] if 'L' in pi2 else pi2['L_corrected']
+        t1 = pi1.get('t_travel', None)
+        t2 = pi2.get('t_travel', None)
+        if t1 is None or t2 is None:
+            raise KeyError(
+                "compute_path_integral / compute_weak_field_integral must return "
+                "a dict with key 't_travel'; "
+                f"got pi1 keys={list(pi1.keys())}, pi2 keys={list(pi2.keys())}"
+            )
+
+        # Extract optical path length with safe fallbacks and a clear error
+        L1 = pi1.get('L', pi1.get('L_corrected', pi1.get('potential_integral', None)))
+        L2 = pi2.get('L', pi2.get('L_corrected', pi2.get('potential_integral', None)))
+        if L1 is None or L2 is None:
+            raise KeyError(
+                "compute_path_integral / compute_weak_field_integral must return "
+                "a dict with key 'L' or 'L_corrected' (or 'potential_integral'); "
+                f"got pi1 keys={list(pi1.keys())}, pi2 keys={list(pi2.keys())}"
+            )
 
         # coordinate distances (at observer, t=const slice)
         obs_pos = sol1.position_end
