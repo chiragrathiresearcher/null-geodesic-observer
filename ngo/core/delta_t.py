@@ -29,7 +29,7 @@ from typing import Optional
 
 from .geodesic import GeodesicSolution, GeodesicSolver
 from .path_integral import compute_path_integral, compute_weak_field_integral
-from .metric import Metric, WeakFieldMetric
+from .metric import Metric, WeakFieldMetric, SchwarzschildMetric
 from .proper_distance import compute_proper_distance
 from .asymmetry_check import check_asymmetry
 
@@ -182,6 +182,19 @@ class DeltaTComputer:
         if method == 'auto':
             method = 'weak_field' if isinstance(self.metric, WeakFieldMetric) \
                      else 'general'
+
+        # coordinate sanity check for metrics that require spherical coords
+        if isinstance(self.metric, SchwarzschildMetric):
+            for name, x0 in (('x0_1', x0_1), ('x0_2', x0_2)):
+                if not hasattr(x0, '__len__') or len(x0) < 2:
+                    raise ValueError(
+                        f"{name} must be a length-4 array [t, r, θ, φ] for SchwarzschildMetric"
+                    )
+                r = float(x0[1])
+                if r <= self.metric.rs:
+                    raise ValueError(
+                        f"SchwarzschildMetric requires initial radial coordinate r > r_s={self.metric.rs:.3e} m; got {name}[1]={r:.3e}"
+                    )
 
         # solve geodesics
         try:
