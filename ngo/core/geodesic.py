@@ -135,9 +135,13 @@ class GeodesicSolver:
 
         try:
             Gamma = self.metric.christoffel(x)
-        except Exception:
-            # If metric fails (e.g. inside Schwarzschild radius), stop
-            return np.zeros(8)
+        except Exception as e:
+            # If metric fails (e.g. metric undefined at this x, e.g. inside horizon),
+            # propagate the error so the integrator halts and caller can handle it.
+            raise RuntimeError(
+                "Metric.christoffel evaluation failed during geodesic RHS "
+                f"evaluation at x={x}. Aborting integration. Original error: {e}"
+            )
 
         # dk^μ/dλ = −Γ^μ_αβ k^α k^β
         dk = -np.einsum('mab,a,b->m', Gamma, k, k)
