@@ -152,29 +152,53 @@ class GeodesicSolver:
         """
         Adjust k^0 so that the null condition g_μν k^μ k^ν = 0 is satisfied.
         Solves: g_00 (k^0)² + 2 g_0i k^0 k^i + g_ij k^i k^j = 0
+
+        This function now handles the degenerate quadratic case when g_00 ≈ 0
+        (linear equation in k^0) robustly.
         """
         g   = self.metric.g(x0)
         k_s = k0[1:]   # spatial components
 
         # coefficients of quadratic in k^0
-        A = g[0, 0]
-        B = 2.0 * np.dot(g[0, 1:], k_s)
-        C_coeff = np.einsum('ij,i,j', g[1:, 1:], k_s, k_s)
+        A = float(g[0, 0])
+        B = float(2.0 * np.dot(g[0, 1:], k_s))
+        C_coeff = float(np.einsum('ij,i,j', g[1:, 1:], k_s, k_s))
+
+        eps = 1e-30
+        # Handle near-degenerate quadratic (A ≈ 0): treat as linear B*k0 + C = 0
+        if abs(A) < eps:
+            if abs(B) < eps:
+                raise ValueError(
+                    "Degenerate null-condition: both A and B coefficients are ~0;"
+                    " cannot determine k^0 from given spatial momentum."
+                )
+            k0_new = -C_coeff / B
+            k_normalized = k0.copy()
+            k_normalized[0] = k0_new
+            return k_normalized
 
         discriminant = B**2 - 4 * A * C_coeff
         if discriminant < 0:
             raise ValueError(
-                "Cannot satisfy null condition with given spatial momentum. "
-                "Check initial conditions."
+                "Cannot satisfy null condition with given spatial momentum: "
+                "quadratic has no real roots. Check initial conditions."
             )
 
-        # choose the root consistent with forward time propagation
         sqrt_disc = np.sqrt(discriminant)
+        # two candidate roots
         k0_opt1 = (-B + sqrt_disc) / (2 * A)
         k0_opt2 = (-B - sqrt_disc) / (2 * A)
 
-        # pick the one with correct sign for forward-propagating photon
-        k0_new = k0_opt1 if k0_opt1 > 0 else k0_opt2
+        # pick the root consistent with forward time propagation (k^0 > 0)
+        candidates = [k0_opt1, k0_opt2]
+        k0_new = None
+        for cand in candidates:
+            if np.isfinite(cand) and cand > 0:
+                k0_new = cand
+                break
+        if k0_new is None:
+            # fall back to the larger (in magnitude) root if neither is >0
+            k0_new = max(candidates, key=lambda v: abs(v))
 
         k_normalized = k0.copy()
         k_normalized[0] = k0_new
