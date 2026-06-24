@@ -184,9 +184,18 @@ class DeltaTComputer:
                      else 'general'
 
         # solve geodesics
-        sol1, sol2 = self.solver.solve_pair(
-            x0_1, k0_1, x0_2, k0_2, lam_end, n_eval=n_eval
-        )
+        try:
+            sol1, sol2 = self.solver.solve_pair(
+                x0_1, k0_1, x0_2, k0_2, lam_end, n_eval=n_eval
+            )
+        except Exception as e:
+            raise RuntimeError(f"Geodesic integration failed: {e}")
+
+        # Validate solver success before consuming the solutions
+        if not getattr(sol1, 'success', False):
+            raise RuntimeError(f"Geodesic solver failed for geodesic 1: {getattr(sol1, 'message', 'no message')}")
+        if not getattr(sol2, 'success', False):
+            raise RuntimeError(f"Geodesic solver failed for geodesic 2: {getattr(sol2, 'message', 'no message')}")
 
         # Validate solver output has expected attributes
         required_attrs = ('position_end',)
