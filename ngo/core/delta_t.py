@@ -211,7 +211,6 @@ class DeltaTComputer:
             raise RuntimeError(f"Geodesic solver failed for geodesic 2: {getattr(sol2, 'message', 'no message')}")
 
         # Validate solver output has expected attributes
-        required_attrs = ('position_end',)
         for i, sol in enumerate((sol1, sol2), start=1):
             if not hasattr(sol, 'position_end'):
                 raise RuntimeError(
